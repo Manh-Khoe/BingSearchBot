@@ -1,0 +1,12 @@
+# Chặn file rác của Python
+__pycache__/
+*.pyc
+
+# Chặn môi trường ảo (nếu sau này bạn dùng)
+venv/
+env/
+.env
+
+# Chặn các file hệ thống máy tính
+.DS_Store
+Thumbs.db
