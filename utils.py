@@ -5,7 +5,6 @@ import os
 from config import KEYWORD_FILE
 
 def clean_system():
-    """Dọn dẹp sạch sẽ Edge và Driver"""
     try:
         subprocess.call("taskkill /f /im msedge.exe /t", shell=True, stderr=subprocess.DEVNULL, stdout=subprocess.DEVNULL)
         subprocess.call("taskkill /f /im msedgedriver.exe /t", shell=True, stderr=subprocess.DEVNULL, stdout=subprocess.DEVNULL)
@@ -19,14 +18,14 @@ def load_keywords():
         return lines if lines else ["bing", "rewards", "weather", "news", "finance"]
     except: return ["news", "tech", "bitcoin", "weather", "youtube"]
 
-def human_type(element, text):
-    """Gõ phím như người thật"""
+# [CẬP NHẬT] Thêm tham số min/max speed
+def human_type(element, text, min_delay=0.1, max_delay=0.4):
+    """Gõ phím với tốc độ tùy chỉnh"""
     for char in text:
         element.send_keys(char)
-        time.sleep(random.uniform(0.1, 0.3))
+        time.sleep(random.uniform(min_delay, max_delay))
 
 def smooth_scroll(driver):
-    """Cuộn trang mượt mà"""
     try:
         total_scroll = random.randint(300, 1000)
         current_scroll = 0
