@@ -7,8 +7,6 @@ from selenium.webdriver.edge.options import Options
 from selenium.webdriver.edge.service import Service
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
-from selenium.webdriver.support.ui import WebDriverWait
-from selenium.webdriver.support import expected_conditions as EC
 from config import *
 from utils import human_type, smooth_scroll
 
@@ -20,13 +18,34 @@ class BingBotCore:
     def stop(self):
         self.is_running = False
 
-    # [CẬP NHẬT] Nhận thêm biến settings
-    def run_browser(self, profile_dir, mode_name, max_count, keywords, is_mobile, settings):
+    def parse_points(self, text):
+        """Chuyển đổi text '5,123' thành số nguyên 5123"""
+        try:
+            return int(text.replace(",", "").replace(".", "").strip())
+        except:
+            return -1
+
+    def get_pc_points(self, driver):
+        """Hàm đọc điểm nhanh cho PC"""
+        try:
+            # Cuộn lên đầu để chắc chắn thấy điểm
+            driver.execute_script("window.scrollTo(0, 0);")
+            try:
+                # Cách 1: Tìm class chung
+                elm = driver.find_element(By.CLASS_NAME, "points-container")
+                return elm.text
+            except:
+                # Cách 2: Tìm ID cụ thể
+                return driver.find_element(By.ID, "id_rc").text
+        except:
+            return "N/A"
+
+    def run_browser(self, profile_dir, mode_name, max_count, keywords, is_mobile, settings, is_auto_mode):
         if not self.is_running: return
 
         self.log(f">>> START: [{profile_dir}] - Mode: {mode_name}")
         
-        # --- LẤY THÔNG SỐ TỪ SETTINGS ---
+        # Lấy tham số
         min_type = settings.get('min_type', 0.1)
         max_type = settings.get('max_type', 0.4)
         thinking = settings.get('thinking', 3.0)
@@ -62,13 +81,17 @@ class BingBotCore:
             driver.get("https://www.bing.com")
             time.sleep(3)
 
-            # Mobile: Mở sẵn Tab 2 để check điểm
+            # Mobile setup
             if is_mobile:
                 self.log(" -> [Mobile] Chuẩn bị Tab Rewards...")
                 driver.execute_script("window.open('https://rewards.bing.com/', '_blank');")
                 driver.switch_to.window(driver.window_handles[1])
                 time.sleep(3)
                 driver.switch_to.window(driver.window_handles[0])
+
+            # Biến theo dõi điểm dừng
+            last_points_int = -1
+            no_increase_streak = 0
 
             # --- SEARCH LOOP ---
             for i in range(1, max_count + 1):
@@ -78,40 +101,52 @@ class BingBotCore:
                 word2 = random.choice(keywords)
                 query = f"{word1} {word2}"
                 
-                # 1. SEARCHING
+                # 1. SEARCH
                 try:
                     search_box = driver.find_element(By.ID, "sb_form_q")
                     search_box.clear()
-                    
-                    # [CẬP NHẬT] Dùng tốc độ gõ từ cài đặt
                     human_type(search_box, query, min_type, max_type)
-                    
-                    # [CẬP NHẬT] Thời gian suy nghĩ trước khi Enter
                     time.sleep(thinking)
-                    
                     search_box.send_keys(Keys.ENTER)
                 except:
                     driver.get(f"https://www.bing.com/search?q={query}&form=TSASDS")
                 
                 time.sleep(3)
 
-                # 2. SCROLLING
+                # 2. SCROLL
                 if random.choice([True, False]): 
                     smooth_scroll(driver)
                 
-                self.log(f"[{profile_dir}][{mode_name}] {i}/{max_count}: '{query}'")
-
-                # 3. CHECK POINTS (Đơn giản hóa để chạy mượt)
-                # Chỉ check nếu là PC hoặc (Mobile và đúng nhịp Interval)
-                check_now = False
-                if not is_mobile: check_now = True
-                elif i % interval == 0 or i == max_count: check_now = True
+                # 3. CHECK POINTS (Chỉ PC check, Mobile bỏ qua vì lỗi)
+                points_str = ""
                 
-                if check_now:
-                    # (Code check điểm cũ của bạn sẽ nằm ở đây - Tạm thời in log giả lập)
-                    pass # Để bot chạy trơn tru trước khi lắp lại phần check điểm phức tạp
+                # Logic: Check mỗi khi (i chia hết cho interval) HOẶC (lượt cuối cùng)
+                should_check = (i % interval == 0) or (i == max_count)
 
-                # [CẬP NHẬT] Thời gian đọc bài (Nghỉ sau khi search)
+                if not is_mobile and should_check:
+                    points_str = self.get_pc_points(driver)
+                    # Log điểm ra màn hình
+                    self.log(f"[{profile_dir}][PC] {i}/{max_count}: '{query}' | Điểm: {points_str}")
+
+                    # --- STOP LOGIC (CHỈ ÁP DỤNG CHO AUTO ALL) ---
+                    if is_auto_mode and points_str != "N/A":
+                        curr = self.parse_points(points_str)
+                        if curr > 0:
+                            if curr > last_points_int:
+                                last_points_int = curr
+                                no_increase_streak = 0
+                            else:
+                                no_increase_streak += 1
+                            
+                            # Nếu 2 lần check liên tiếp (tức là khoảng 6 search) không tăng -> Dừng
+                            if no_increase_streak >= 2:
+                                self.log(f" [!] Điểm đứng yên ({last_points_int}). Next qua acc khác!")
+                                break
+                else:
+                    # Mobile hoặc chưa đến lượt check thì log gọn
+                    self.log(f"[{profile_dir}][{mode_name}] {i}/{max_count}: '{query}'")
+
+                # 4. READ TIME
                 wait_time = random.uniform(min_read, max_read)
                 time.sleep(wait_time) 
                 
