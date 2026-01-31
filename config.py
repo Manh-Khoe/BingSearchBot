@@ -9,19 +9,17 @@ USER_DATA_DIR = os.path.join(os.getenv('LOCALAPPDATA'), 'Microsoft', 'Edge', 'Us
 # --- CẤU HÌNH MẶC ĐỊNH (SỐ LƯỢNG) ---
 DEFAULT_PC_TURNS = 30
 DEFAULT_MOBILE_TURNS = 20
-DEFAULT_INTERVAL = 3  # Số lượt search thì check điểm 1 lần (Mobile)
+DEFAULT_INTERVAL = 3
 
 # --- CẤU HÌNH MẶC ĐỊNH (THỜI GIAN - GIÂY) ---
-# Tốc độ gõ (giây cho mỗi ký tự)
 DEFAULT_MIN_TYPE = 0.1
 DEFAULT_MAX_TYPE = 0.4
-
-# Thời gian suy nghĩ trước khi nhấn Enter
 DEFAULT_THINKING = 3.5
-
-# Tốc độ đọc (nghỉ sau khi search xong)
 DEFAULT_MIN_READ = 5.0
 DEFAULT_MAX_READ = 10.0
+
+# [MỚI] Thời gian nghỉ giữa các nhiệm vụ (chuyển PC->Mobile hoặc Acc->Acc)
+DEFAULT_TASK_DELAY = 15 
 
 # DANH SÁCH PROFILE
 PROFILES_LIST = ["Default", "Profile 4", "Profile 8"]

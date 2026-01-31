@@ -19,23 +19,18 @@ class BingBotCore:
         self.is_running = False
 
     def parse_points(self, text):
-        """Chuyển đổi text '5,123' thành số nguyên 5123"""
         try:
             return int(text.replace(",", "").replace(".", "").strip())
         except:
             return -1
 
     def get_pc_points(self, driver):
-        """Hàm đọc điểm nhanh cho PC"""
         try:
-            # Cuộn lên đầu để chắc chắn thấy điểm
             driver.execute_script("window.scrollTo(0, 0);")
             try:
-                # Cách 1: Tìm class chung
                 elm = driver.find_element(By.CLASS_NAME, "points-container")
                 return elm.text
             except:
-                # Cách 2: Tìm ID cụ thể
                 return driver.find_element(By.ID, "id_rc").text
         except:
             return "N/A"
@@ -79,6 +74,10 @@ class BingBotCore:
             driver = webdriver.Edge(options=options, service=service)
             
             driver.get("https://www.bing.com")
+            
+            # [ĐÃ XÓA] Dòng lệnh driver.minimize_window() gây lỗi đen màn hình và rung lắc
+            # Bot sẽ mở cửa sổ Full màn hình bình thường.
+
             time.sleep(3)
 
             # Mobile setup
@@ -89,7 +88,6 @@ class BingBotCore:
                 time.sleep(3)
                 driver.switch_to.window(driver.window_handles[0])
 
-            # Biến theo dõi điểm dừng
             last_points_int = -1
             no_increase_streak = 0
 
@@ -117,18 +115,15 @@ class BingBotCore:
                 if random.choice([True, False]): 
                     smooth_scroll(driver)
                 
-                # 3. CHECK POINTS (Chỉ PC check, Mobile bỏ qua vì lỗi)
+                # 3. CHECK POINTS
                 points_str = ""
-                
-                # Logic: Check mỗi khi (i chia hết cho interval) HOẶC (lượt cuối cùng)
                 should_check = (i % interval == 0) or (i == max_count)
 
                 if not is_mobile and should_check:
                     points_str = self.get_pc_points(driver)
-                    # Log điểm ra màn hình
                     self.log(f"[{profile_dir}][PC] {i}/{max_count}: '{query}' | Điểm: {points_str}")
 
-                    # --- STOP LOGIC (CHỈ ÁP DỤNG CHO AUTO ALL) ---
+                    # STOP LOGIC (AUTO ALL ONLY)
                     if is_auto_mode and points_str != "N/A":
                         curr = self.parse_points(points_str)
                         if curr > 0:
@@ -138,12 +133,10 @@ class BingBotCore:
                             else:
                                 no_increase_streak += 1
                             
-                            # Nếu 2 lần check liên tiếp (tức là khoảng 6 search) không tăng -> Dừng
                             if no_increase_streak >= 2:
-                                self.log(f" [!] Điểm đứng yên ({last_points_int}). Next qua acc khác!")
+                                self.log(f" [!] Điểm đứng yên ({last_points_int}). Next!")
                                 break
                 else:
-                    # Mobile hoặc chưa đến lượt check thì log gọn
                     self.log(f"[{profile_dir}][{mode_name}] {i}/{max_count}: '{query}'")
 
                 # 4. READ TIME
