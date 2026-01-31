@@ -5,7 +5,7 @@ import random
 import time
 from datetime import datetime
 from config import *
-from utils import clean_system, load_keywords
+from utils import clean_system, load_keywords, save_settings_to_file, load_settings_from_file
 from bot_core import BingBotCore
 
 # Cài đặt giao diện
@@ -16,9 +16,29 @@ class App(ctk.CTk):
     def __init__(self):
         super().__init__()
 
-        self.title("MS Rewards Bot v5.5 (Final Control)")
+        self.title("MS Rewards Bot v5.6 (Auto Save Settings)")
         self.geometry("980x720")
         self.protocol("WM_DELETE_WINDOW", self.on_closing)
+
+        # --- LOAD CÀI ĐẶT CŨ (NẾU CÓ) ---
+        saved_data = load_settings_from_file()
+        
+        # Nếu chưa có file save thì dùng mặc định trong config.py
+        self.cfg = {
+            "pc": saved_data.get("pc_turns", DEFAULT_PC_TURNS) if saved_data else DEFAULT_PC_TURNS,
+            "mob": saved_data.get("mob_turns", DEFAULT_MOBILE_TURNS) if saved_data else DEFAULT_MOBILE_TURNS,
+            "int": saved_data.get("interval", DEFAULT_INTERVAL) if saved_data else DEFAULT_INTERVAL,
+            
+            "min_t": saved_data.get("min_type", DEFAULT_MIN_TYPE) if saved_data else DEFAULT_MIN_TYPE,
+            "max_t": saved_data.get("max_type", DEFAULT_MAX_TYPE) if saved_data else DEFAULT_MAX_TYPE,
+            "think": saved_data.get("thinking", DEFAULT_THINKING) if saved_data else DEFAULT_THINKING,
+            
+            "min_r": saved_data.get("min_read", DEFAULT_MIN_READ) if saved_data else DEFAULT_MIN_READ,
+            "max_r": saved_data.get("max_read", DEFAULT_MAX_READ) if saved_data else DEFAULT_MAX_READ,
+            
+            "mobile_only": saved_data.get("mobile_only", False) if saved_data else False,
+            "mode_auto": saved_data.get("mode_auto", True) if saved_data else True
+        }
 
         # --- GRID LAYOUT ---
         self.grid_columnconfigure(1, weight=1)
@@ -37,7 +57,10 @@ class App(ctk.CTk):
         self.lbl_mode = ctk.CTkLabel(self.sidebar, text="CHẾ ĐỘ CHẠY:", anchor="w", font=ctk.CTkFont(size=13, weight="bold"))
         self.lbl_mode.grid(row=1, column=0, padx=20, pady=(10, 5), sticky="w")
 
-        self.radio_var = ctk.IntVar(value=0) # 0 = Auto All, 1 = Single
+        # Load giá trị Radio Button từ file save
+        init_mode = 0 if self.cfg["mode_auto"] else 1
+        self.radio_var = ctk.IntVar(value=init_mode) 
+
         self.rb_auto = ctk.CTkRadioButton(self.sidebar, text=f"Auto All ({len(PROFILES_LIST)} Acc)", variable=self.radio_var, value=0, command=self.update_ui_state)
         self.rb_auto.grid(row=2, column=0, padx=20, pady=10, sticky="w")
         
@@ -51,8 +74,8 @@ class App(ctk.CTk):
         self.profile_menu = ctk.CTkOptionMenu(self.sidebar, values=PROFILES_LIST, width=180)
         self.profile_menu.grid(row=5, column=0, padx=20, pady=(5, 10))
 
-        # Switch Mobile Only
-        self.switch_mobile_var = ctk.BooleanVar(value=False)
+        # Switch Mobile Only (Load từ file save)
+        self.switch_mobile_var = ctk.BooleanVar(value=self.cfg["mobile_only"])
         self.switch_mobile = ctk.CTkSwitch(self.sidebar, text="Chỉ chạy Mobile", variable=self.switch_mobile_var, font=ctk.CTkFont(size=13))
         self.switch_mobile.grid(row=6, column=0, padx=20, pady=20, sticky="w")
 
@@ -71,13 +94,16 @@ class App(ctk.CTk):
         self.log_box = ctk.CTkTextbox(self.main_frame, height=380, font=("Consolas", 13))
         self.log_box.pack(fill="both", expand=True, pady=(0, 15))
         self.log_box.configure(state="disabled")
-        self.log_message("⚡ Sẵn sàng...")
+        if saved_data:
+            self.log_message("⚡ Đã tải cài đặt từ phiên trước.")
+        else:
+            self.log_message("⚡ Sử dụng cài đặt mặc định.")
 
         # Settings
         self.settings_frame = ctk.CTkFrame(self.main_frame, fg_color="#212121", corner_radius=10)
         self.settings_frame.pack(fill="x", pady=5, ipady=10)
 
-        self.lbl_config = ctk.CTkLabel(self.settings_frame, text="⚙️ CẤU HÌNH THAM SỐ (Để trống = Mặc định)", font=ctk.CTkFont(size=15, weight="bold"))
+        self.lbl_config = ctk.CTkLabel(self.settings_frame, text="⚙️ CẤU HÌNH THAM SỐ (Tự động lưu khi thoát)", font=ctk.CTkFont(size=15, weight="bold"))
         self.lbl_config.pack(pady=10)
 
         self.grid_inputs = ctk.CTkFrame(self.settings_frame, fg_color="transparent")
@@ -90,30 +116,29 @@ class App(ctk.CTk):
         self.f1 = ctk.CTkFrame(self.grid_inputs, fg_color="transparent")
         self.f1.grid(row=0, column=0, sticky="n")
         ctk.CTkLabel(self.f1, text="SỐ LƯỢNG", text_color="#3498db", font=("Arial", 12, "bold")).pack(pady=5)
-        self.create_input(self.f1, "PC Count:", str(DEFAULT_PC_TURNS), "entry_pc")
-        self.create_input(self.f1, "Mobile Count:", str(DEFAULT_MOBILE_TURNS), "entry_mob")
-        self.create_input(self.f1, "Interval:", str(DEFAULT_INTERVAL), "entry_int")
+        self.create_input(self.f1, "PC Count:", str(self.cfg["pc"]), "entry_pc")
+        self.create_input(self.f1, "Mobile Count:", str(self.cfg["mob"]), "entry_mob")
+        self.create_input(self.f1, "Interval:", str(self.cfg["int"]), "entry_int")
 
         # Cột 2
         self.f2 = ctk.CTkFrame(self.grid_inputs, fg_color="transparent")
         self.f2.grid(row=0, column=1, sticky="n")
         ctk.CTkLabel(self.f2, text="TỐC ĐỘ GÕ (s)", text_color="#f39c12", font=("Arial", 12, "bold")).pack(pady=5)
-        self.create_input(self.f2, "Min Type:", str(DEFAULT_MIN_TYPE), "entry_min_type")
-        self.create_input(self.f2, "Max Type:", str(DEFAULT_MAX_TYPE), "entry_max_type")
-        self.create_input(self.f2, "Thinking:", str(DEFAULT_THINKING), "entry_think")
+        self.create_input(self.f2, "Min Type:", str(self.cfg["min_t"]), "entry_min_type")
+        self.create_input(self.f2, "Max Type:", str(self.cfg["max_t"]), "entry_max_type")
+        self.create_input(self.f2, "Thinking:", str(self.cfg["think"]), "entry_think")
 
         # Cột 3
         self.f3 = ctk.CTkFrame(self.grid_inputs, fg_color="transparent")
         self.f3.grid(row=0, column=2, sticky="n")
         ctk.CTkLabel(self.f3, text="TỐC ĐỘ ĐỌC (s)", text_color="#e74c3c", font=("Arial", 12, "bold")).pack(pady=5)
-        self.create_input(self.f3, "Min Read:", str(DEFAULT_MIN_READ), "entry_min_read")
-        self.create_input(self.f3, "Max Read:", str(DEFAULT_MAX_READ), "entry_max_read")
+        self.create_input(self.f3, "Min Read:", str(self.cfg["min_r"]), "entry_min_read")
+        self.create_input(self.f3, "Max Read:", str(self.cfg["max_r"]), "entry_max_read")
 
         self.bot_core = None
         self.is_running = False
-        self.all_entries = [] # Danh sách chứa tất cả ô nhập để khóa/mở
+        self.all_entries = [] 
         
-        # Gom các entry vào list để dễ quản lý
         self.collect_entries()
         self.update_ui_state()
 
@@ -121,12 +146,12 @@ class App(ctk.CTk):
         frame = ctk.CTkFrame(parent, fg_color="transparent")
         frame.pack(pady=2)
         ctk.CTkLabel(frame, text=label, width=100, anchor="e").pack(side="left", padx=(0, 10))
-        entry = ctk.CTkEntry(frame, placeholder_text=placeholder, width=60, justify="center")
+        entry = ctk.CTkEntry(frame, width=60, justify="center")
+        entry.insert(0, placeholder) # Điền giá trị đã load vào
         entry.pack(side="left")
         setattr(self, var_name, entry)
 
     def collect_entries(self):
-        """Gom hết các ô nhập vào 1 list"""
         self.all_entries = [
             self.entry_pc, self.entry_mob, self.entry_int,
             self.entry_min_type, self.entry_max_type, self.entry_think,
@@ -134,15 +159,12 @@ class App(ctk.CTk):
         ]
 
     def update_ui_state(self):
-        """Khóa/Mở Dropdown Profile"""
-        if self.radio_var.get() == 0: # Auto All
+        if self.radio_var.get() == 0: 
             self.profile_menu.configure(state="disabled", fg_color="gray")
-        else: # Single Profile
+        else: 
             self.profile_menu.configure(state="normal", fg_color="#1f6aa5")
 
     def toggle_inputs(self, state):
-        """Khóa hoặc Mở toàn bộ ô nhập liệu tham số"""
-        # state là "normal" hoặc "disabled"
         for entry in self.all_entries:
             entry.configure(state=state)
 
@@ -161,6 +183,7 @@ class App(ctk.CTk):
                 return float(val) if is_float else int(val)
             except: return default
 
+        # Hàm này lấy giá trị hiện tại trên màn hình
         return {
             "pc_turns": get_val(self.entry_pc, DEFAULT_PC_TURNS),
             "mob_turns": get_val(self.entry_mob, DEFAULT_MOBILE_TURNS),
@@ -170,6 +193,10 @@ class App(ctk.CTk):
             "thinking": get_val(self.entry_think, DEFAULT_THINKING, True),
             "min_read": get_val(self.entry_min_read, DEFAULT_MIN_READ, True),
             "max_read": get_val(self.entry_max_read, DEFAULT_MAX_READ, True),
+            
+            # Lưu cả trạng thái Mobile Only và Mode Auto
+            "mobile_only": self.switch_mobile_var.get(),
+            "mode_auto": (self.radio_var.get() == 0)
         }
 
     def run_bot_process(self):
@@ -179,7 +206,7 @@ class App(ctk.CTk):
         
         self.bot_core = BingBotCore(self.log_message)
         
-        is_auto_mode = (self.radio_var.get() == 0) # True nếu là Auto All
+        is_auto_mode = settings["mode_auto"]
         
         target_profiles = []
         if is_auto_mode:
@@ -190,7 +217,7 @@ class App(ctk.CTk):
             target_profiles = [selected]
             self.log_message(f"👤 CHẾ ĐỘ: SINGLE PROFILE [{selected}]")
 
-        mobile_only = self.switch_mobile_var.get()
+        mobile_only = settings["mobile_only"]
         if mobile_only: self.log_message("📱 TÙY CHỌN: CHỈ CHẠY MOBILE")
         
         queue = []
@@ -207,7 +234,6 @@ class App(ctk.CTk):
         for task in queue:
             if not self.is_running: break
             
-            # Truyền thêm biến is_auto_mode vào core
             self.bot_core.run_browser(
                 profile_dir=task['p'],
                 mode_name=task['m'],
@@ -230,16 +256,14 @@ class App(ctk.CTk):
         if self.is_running: return
         self.is_running = True
         
-        # Khóa nút Start, Mở Stop
         self.btn_start.configure(state="disabled", fg_color="gray")
         self.btn_stop.configure(state="normal", fg_color="#e74c3c")
         
-        # Khóa toàn bộ Controls và Inputs
         self.rb_auto.configure(state="disabled")
         self.rb_single.configure(state="disabled")
         self.profile_menu.configure(state="disabled")
         self.switch_mobile.configure(state="disabled")
-        self.toggle_inputs("disabled") # KHÓA NHẬP LIỆU
+        self.toggle_inputs("disabled")
 
         threading.Thread(target=self.run_bot_process, daemon=True).start()
 
@@ -250,17 +274,25 @@ class App(ctk.CTk):
         self.btn_start.configure(state="normal", fg_color="#2ecc71")
         self.btn_stop.configure(state="disabled", fg_color="gray")
         
-        # Mở khóa lại Controls và Inputs
         self.rb_auto.configure(state="normal")
         self.rb_single.configure(state="normal")
         self.switch_mobile.configure(state="normal")
-        self.toggle_inputs("normal") # MỞ KHÓA NHẬP LIỆU
+        self.toggle_inputs("normal")
         self.update_ui_state()
         
         self.log_message("⛔ ĐÃ DỪNG.")
 
     def on_closing(self):
+        # 1. Dừng Bot
         self.stop_bot()
+        
+        # 2. Lấy toàn bộ thông số hiện tại trên màn hình
+        current_settings = self.get_settings()
+        
+        # 3. Lưu vào file JSON
+        save_settings_to_file(current_settings)
+        
+        # 4. Dọn dẹp và thoát
         clean_system()
         self.destroy()
         sys.exit()

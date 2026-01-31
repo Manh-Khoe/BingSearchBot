@@ -1,0 +1,12 @@
+{
+    "pc_turns": 30,
+    "mob_turns": 20,
+    "interval": 3,
+    "min_type": 0.2,
+    "max_type": 0.65,
+    "thinking": 3.5,
+    "min_read": 7.0,
+    "max_read": 12.0,
+    "mobile_only": false,
+    "mode_auto": false
+}
