@@ -1,0 +1,20 @@
+{
+    "date": "2026-02-10",
+    "data": {
+        "Profile 8": {
+            "status": "Done",
+            "start": 5530,
+            "current": 5680
+        },
+        "Profile 4": {
+            "status": "Done",
+            "start": 6969,
+            "current": 7101
+        },
+        "Default": {
+            "status": "Running",
+            "start": 7316,
+            "current": 7400
+        }
+    }
+}

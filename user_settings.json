@@ -2,7 +2,7 @@
     "pc_turns": 30,
     "mob_turns": 20,
     "interval": 3,
-    "delay_task": 15,
+    "delay_task": 20,
     "min_type": 0.2,
     "max_type": 0.65,
     "thinking": 3.5,
