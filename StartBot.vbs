@@ -3,3 +3,4 @@ Set fso = CreateObject("Scripting.FileSystemObject")
 scriptDir = fso.GetParentFolderName(WScript.ScriptFullName)
 WshShell.CurrentDirectory = scriptDir
 WshShell.Run "pythonw main_gui.py", 0, False
+

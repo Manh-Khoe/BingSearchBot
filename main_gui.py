@@ -271,7 +271,18 @@ class App(ctk.CTk):
         if self.profile_menu.get() not in profiles and profiles:
             self.profile_menu.set(profiles[0])
         self.render_scoreboard_rows()
-        self.log_message("⚙️ Đã lưu và áp dụng cài đặt mới!")
+
+        # Cập nhật thông báo phản hồi trực quan trên giao diện chính
+        self.lbl_main_status.configure(text="✅ Đã lưu và áp dụng cài đặt thành công!", text_color=COLOR_SUCCESS)
+        self.lbl_sub_status.configure(text=f"Đã cập nhật cấu hình mới ({len(profiles)} Profiles)", text_color=COLOR_TEXT)
+        self.log_message("🎉 [THÀNH CÔNG] Toàn bộ cài đặt mới đã được lưu vào 'user_settings.json' và áp dụng ngay!")
+
+        # Tự động trả về trạng thái sẵn sàng sau 4 giây
+        def reset_status():
+            if not self.is_running:
+                self.lbl_main_status.configure(text="🟢 Hệ thống sẵn sàng (Edge Native)", text_color=COLOR_SUCCESS)
+                self.lbl_sub_status.configure(text="Chọn chế độ rồi nhấn 'Bắt đầu chạy' để tiến hành", text_color=COLOR_TEXT_SECONDARY)
+        self.after(4000, reset_status)
 
     def process_queue_updates(self):
         try:
