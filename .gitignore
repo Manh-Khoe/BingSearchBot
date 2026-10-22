@@ -1,12 +1,30 @@
 # Chặn file rác của Python
 __pycache__/
-*.pyc
-
-# Chặn môi trường ảo (nếu sau này bạn dùng)
-venv/
+*.py[cod]
+*$py.class
+*.so
+.Python
 env/
+venv/
+ENV/
 .env
 
-# Chặn các file hệ thống máy tính
+# Chặn thư mục học tập cá nhân
+HK6/
+.vs/
+.vscode/
+.idea/
+
+# Chặn dữ liệu tài khoản và trình duyệt
+BingBot_Data/
+msedgedriver.exe
+*.log
+
+# Cấu hình và dữ liệu chạy cá nhân (không push lên repo công khai)
+daily_stats.json
+user_settings.json
+
+# Hệ thống
 .DS_Store
 Thumbs.db
+desktop.ini

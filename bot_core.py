@@ -26,18 +26,42 @@ class BingBotCore:
             return -1
 
     def _create_driver(self, profile_dir, is_mobile=False):
+        # === 1. DỌN DẸP TRÌNH DUYỆT NGẦM ===
+        self.log("🧹 Đang dọn dẹp trình duyệt ngầm...")
+        try:
+            os.system("taskkill /F /IM msedge.exe /T >nul 2>&1")
+            os.system("taskkill /F /IM msedgewebview2.exe /T >nul 2>&1")
+            time.sleep(1.5)
+        except: pass
+
         options = Options()
-        options.add_argument(f"--user-data-dir={USER_DATA_DIR}")
+        
+        # === 2. CÁCH LY HOÀN TOÀN KHỎI PROFILE CỦA WINDOWS ===
+        # Tạo thư mục BingBot_Data ngay trong thư mục chứa tool để lưu data riêng biệt
+        ISOLATED_DATA_DIR = os.path.join(os.getcwd(), "BingBot_Data")
+        options.add_argument(f"--user-data-dir={ISOLATED_DATA_DIR}")
         options.add_argument(f"--profile-directory={profile_dir}")
         
-        options.add_argument("--disable-gpu") 
-        options.add_argument("--disable-software-rasterizer")
-        options.add_argument("--disable-dev-shm-usage")
+        # Ép chuẩn đường dẫn Edge gốc (Tránh gọi nhầm WebView2)
+        options.binary_location = r"C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe"
+        
+        # === 3. CHIẾN LƯỢC TẢI TRANG & FIX LỖI BẢO MẬT ===
+        options.page_load_strategy = 'eager'
+        
+        options.add_argument("--remote-debugging-port=0") 
+        options.add_argument("--remote-allow-origins=*")
+        
+        # Cấu hình chống Crash cho Edge v147+
         options.add_argument("--no-sandbox")
+        options.add_argument("--disable-dev-shm-usage")
+        options.add_argument("--disable-gpu") 
+        options.add_argument("--disable-background-networking")
+        options.add_argument("--disable-default-apps")
+        options.add_argument("--disable-features=msEdgeEnhanceSecurity,RendererCodeIntegrity")
+        
         options.add_argument("--log-level=3") 
         options.add_argument("--silent")
         options.add_experimental_option('excludeSwitches', ['enable-logging', 'enable-automation'])
-        options.add_argument("--start-maximized")
         
         if is_mobile:
             options.add_argument(f"user-agent={MOBILE_UA}")
@@ -50,33 +74,26 @@ class BingBotCore:
         service.creation_flags = subprocess.CREATE_NO_WINDOW
         return webdriver.Edge(options=options, service=service)
 
-    # --- [UPDATE] HÀM ĐỌC ĐIỂM CHỐNG NHẢY SỐ (STABILITY CHECK) ---
+    # --- HÀM ĐỌC ĐIỂM CHỐNG NHẢY SỐ (STABILITY CHECK) ---
     def get_points_safe(self, driver, max_retries=5):
-        """
-        Đọc điểm và đảm bảo con số đã dừng nhảy (animation finished).
-        """
         last_value = None
-        stable_count = 0 # Đếm số lần giá trị không đổi
+        stable_count = 0 
         
-        # Tăng số lần thử lên một chút để bù cho thời gian chờ animation
         for _ in range(max_retries + 5):
             if not self.is_running: return "N/A"
             try:
                 raw_text = ""
-                # Ưu tiên 1: Class points-container
                 try:
                     elm = driver.find_element(By.CLASS_NAME, "points-container")
                     raw_text = elm.text
                 except: pass
                 
-                # Ưu tiên 2: ID id_rc
                 if not raw_text:
                     try: 
                         elm = driver.find_element(By.ID, "id_rc")
                         raw_text = elm.text
                     except: pass
                 
-                # Ưu tiên 3: Các selector khác...
                 if not raw_text:
                     try:
                         elm = driver.find_element(By.XPATH, "//span[contains(@class, 'pointsValue')]")
@@ -89,26 +106,22 @@ class BingBotCore:
                         raw_text = elm.text
                     except: pass
 
-                # LOGIC KIỂM TRA ĐỘ ỔN ĐỊNH
                 if raw_text and any(char.isdigit() for char in raw_text):
                     current_val = self.parse_points(raw_text)
                     
                     if current_val == last_value:
                         stable_count += 1
                     else:
-                        stable_count = 0 # Reset nếu số thay đổi
+                        stable_count = 0 
                         last_value = current_val
                     
-                    # Nếu số giữ nguyên trong 2 lần check liên tiếp (khoảng 1-1.5s) -> CHỐT
                     if stable_count >= 1: 
                         return raw_text
             except:
                 pass
             
-            # Thời gian chờ giữa các lần check
             time.sleep(0.8) 
             
-        # Nếu hết thời gian mà vẫn chưa ổn định (hoặc ko tìm thấy), trả về giá trị cuối cùng đọc được
         return str(last_value) if last_value else "N/A"
 
     def check_points_final_round(self, profile_dir):
@@ -122,7 +135,6 @@ class BingBotCore:
 
             driver.get("https://www.bing.com")
             
-            # Tăng retries lên để có thời gian cho animation chạy hết
             final_pts = self.get_points_safe(driver, max_retries=15)
             self.log(f"🏁 TỔNG KẾT ĐIỂM: {final_pts}")
             
@@ -149,9 +161,7 @@ class BingBotCore:
             
             driver.get("https://www.bing.com")
             
-            # PC: Đọc điểm đầu
             if not is_mobile:
-                # Max retries cao hơn chút để chờ load trang
                 start_pts_str = self.get_points_safe(driver, max_retries=10)
                 if start_pts_str != "N/A" and self.stats:
                     self.stats(profile_dir, start_p=self.parse_points(start_pts_str))
@@ -200,7 +210,6 @@ class BingBotCore:
                 if not is_mobile:
                     should_check = (i % interval == 0) or (i == max_count)
                     if should_check:
-                        # Check định kỳ thì chỉ cần retry ít thôi (2-3 lần) cho nhanh
                         points_str = self.get_points_safe(driver, max_retries=3)
                         self.log(f"[{profile_dir}][PC] {i}/{max_count}: '{query}' | Điểm: {points_str}")
 
@@ -229,7 +238,6 @@ class BingBotCore:
                 try: driver.quit()
                 except: pass
             
-            # --- Chốt điểm Mobile ---
             if is_mobile and self.is_running:
                 delay = settings.get('delay_task', 5)
                 self.log(f"⏳ Nghỉ {delay}s trước khi chốt điểm...")
