@@ -12,8 +12,9 @@
 
 - **Tự động cập nhật Driver:** Tích hợp công nghệ *Selenium Manager* thông minh, tự động kiểm tra phiên bản Edge đang cài trên máy và tải driver tương thích hoàn toàn tự động. Người dùng không bao giờ phải tự đi tìm tải `msedgedriver.exe` nữa!
 - **Mobile Emulation chính chủ (`EdgA`):** Kích hoạt chế độ giả lập điện thoại chuẩn Chromium (Viewport 412x915, Touch screen, định danh Edge on Android) ➔ Ăn trọn điểm tìm kiếm di động mỗi ngày!
+- **Ghi nhớ toàn bộ tùy chọn Sidebar:** Tự động lưu và khôi phục chế độ chạy (Auto All / Chạy lẻ 1 hồ sơ), hồ sơ đã chọn, loại nhiệm vụ (Full Run / PC Only / Mobile Only), nhiệm vụ chi tiết và công tắc tự tắt bot sau mỗi lần tắt/mở ứng dụng.
+- **Biểu tượng Desktop 1-Click (`Bing Rewards Bot`):** Hỗ trợ tạo ngay lối tắt với logo Bing chính chủ ngoài màn hình Desktop, khởi động êm ru hoàn toàn không hiện cửa sổ terminal đen.
 - **Bảng điểm 6 cột chi tiết:** Theo dõi độc lập `+ ĐIỂM PC`, `+ ĐIỂM MOBILE` và `TỔNG ĐIỂM` sau mỗi phiên chạy để xác nhận điểm tăng thực tế.
-- **Lựa chọn linh hoạt:** Hỗ trợ cả chế độ **Chạy tất cả (Auto All)** và **Chạy lẻ 1 Profile** (kèm lựa chọn `Full Run`, `PC Only`, `Mobile Only`).
 - **Giao diện Windows 11 Fluent Dark:** Hiện đại, sắc nét, có bảng Cài đặt ⚙️ tùy chỉnh trực quan mà không cần chỉnh sửa code.
 
 ---
@@ -70,7 +71,13 @@ Setup_Acc.bat
 
 ## 🚀 Hướng dẫn khởi chạy Bot
 
-### Cách khởi động êm ái không hiện cửa sổ terminal đen (Khuyên dùng)
+### Cách 1: Tạo lối tắt ngoài Desktop với biểu tượng Bing chính chủ (Khuyên dùng nhất)
+1. Trong thư mục dự án, chỉ cần nhấp đúp vào:
+   👉 **`Create_Desktop_Shortcut.bat`**
+2. Một biểu tượng đẹp mắt mang tên **`Bing Rewards Bot`** với logo Bing chính chủ sẽ tự động xuất hiện trên màn hình Desktop của bạn.
+3. Từ nay, bạn chỉ cần **nhấp đúp vào biểu tượng ngoài màn hình Desktop** để mở bot ngay lập tức, 100% không nhảy màn hình đen CMD!
+
+### Cách 2: Khởi động trực tiếp từ thư mục
 Nhấp đúp vào file:
 👉 **`StartBot.vbs`**  
 *(Giao diện đồ họa sẽ mở lên ngay lập tức mà 100% không nhảy bất kỳ cửa sổ CMD đen nào).*
@@ -83,20 +90,13 @@ Nhấp đúp vào file:
 
 ### 1. Chọn chế độ chạy Profile:
 - **Chạy tất cả (Auto All):** Bot sẽ tự động chạy xoay vòng lần lượt tất cả các Profile có trong danh sách.
-- **Chạy lẻ 1 hồ sơ:** Khi tick chọn mục này, menu dropdown bên dưới sẽ sáng lên cho phép bạn chọn đích danh 1 Profile (ví dụ chỉ chạy riêng `Profile 1`).
+- **Chạy lẻ 1 hồ sơ:** Khi tick chọn mục này, menu dropdown bên dưới sẽ sáng lên cho phép bạn chọn đích danh 1 Profile (ví dụ chỉ chạy riêng `Profile 1` hoặc `Profile 2`).
+- *Lưu ý:* Mọi lựa chọn đều được **tự động ghi nhớ** cho các lần khởi động tiếp theo!
 
 ### 2. Cần gạt loại nhiệm vụ (Nền tảng):
 - **`Full Run`**: Chạy trọn gói cả PC Search, Daily Sets và Mobile Search.
 - **`PC Only`**: Chỉ chạy tìm kiếm máy tính và nhiệm vụ hàng ngày.
 - **`Mobile Only`**: Chỉ chạy tìm kiếm di động giả lập Edge Android (`EdgA`).
-
-### 3. Đọc bảng điểm Session Stats 6 cột:
-- **`HỒ SƠ EDGE`**: Tên Profile đang xử lý.
-- **`TRẠNG THÁI`**: *Sẵn sàng* ➔ *Running* (màu cam) ➔ *Done* (màu xanh lá).
-- **`ĐIỂM ĐẦU`**: Điểm số ghi nhận lúc bắt đầu phiên.
-- **`+ ĐIỂM PC`**: Số điểm kiếm thêm được từ PC Search & Daily Sets (màu xanh lá).
-- **`+ ĐIỂM MOBILE`**: Số điểm kiếm thêm được từ Mobile Search (màu cam).
-- **`TỔNG ĐIỂM`**: Tổng số điểm tích lũy hiện có của tài khoản (màu xanh Cyan).
 
 ---
 
@@ -105,23 +105,27 @@ Nhấp đúp vào file:
 ```text
 BingSearchBot/
 ├── core/
-│   ├── browser_factory.py     # Tự động cập nhật EdgeDriver & khởi tạo (Desktop + Mobile)
-│   ├── pc_engine.py           # Lõi PC (Search + Daily Sets/Quizzes + Đọc điểm)
-│   ├── mobile_edge_engine.py  # Lõi Mobile (EdgA Emulation + Touch Events)
-│   ├── coordinator.py         # Điều phối luồng tuần tự PC ➔ Mobile
-│   └── config_manager.py      # Quản lý cấu hình JSON tập trung
+│   ├── browser_factory.py         # Tự động cập nhật EdgeDriver & khởi tạo (Desktop + Mobile)
+│   ├── pc_engine.py               # Lõi PC (Search + Daily Sets/Quizzes + Đọc điểm)
+│   ├── mobile_edge_engine.py      # Lõi Mobile (EdgA Emulation + Touch Events)
+│   ├── coordinator.py             # Điều phối luồng tuần tự PC ➔ Mobile
+│   └── config_manager.py          # Quản lý cấu hình JSON tập trung
 ├── ui/
-│   ├── theme.py               # Bảng màu Windows 11 Fluent Dark Mode
-│   └── settings_window.py     # Cửa sổ Cài đặt hệ thống ⚙️
-├── main_gui.py                # Giao diện chính CustomTkinter
-├── user_settings.json         # File cấu hình cá nhân (không đụng code)
-├── daily_stats.json           # Thống kê điểm số hàng ngày (tự reset mỗi ngày mới)
-├── keywords.txt               # Từ điển từ khóa tìm kiếm tự nhiên
-├── requirements.txt           # Danh sách thư viện Python
-├── Setup_Acc.bat              # Script mở Edge để đăng nhập tài khoản / tạo Profile mới
-├── StartBot.vbs               # Khởi động Bot 1-click êm ru (KHÔNG hiện terminal đen)
-├── StartBot.bat               # Khởi động Bot qua file Batch
-└── README.md                  # Tài liệu hướng dẫn chi tiết
+│   ├── theme.py                   # Bảng màu Windows 11 Fluent Dark Mode
+│   └── settings_window.py         # Cửa sổ Cài đặt hệ thống ⚙️
+├── app_icon.ico                   # Biểu tượng ứng dụng đa kích thước (16x16 -> 256x256)
+├── app_icon.png                   # Biểu tượng ứng dụng PNG sắc nét
+├── Create_Desktop_Shortcut.bat    # 1-Click tạo lối tắt ngoài màn hình Desktop kèm biểu tượng
+├── create_shortcut.ps1            # Script PowerShell tự động gắn icon & đường dẫn Desktop
+├── main_gui.py                    # Giao diện chính CustomTkinter
+├── user_settings.json             # File cấu hình cá nhân & ghi nhớ trạng thái UI
+├── daily_stats.json               # Thống kê điểm số hàng ngày (tự reset mỗi ngày mới)
+├── keywords.txt                   # Từ điển từ khóa tìm kiếm tự nhiên
+├── requirements.txt               # Danh sách thư viện Python
+├── Setup_Acc.bat                  # Script mở Edge để đăng nhập tài khoản / tạo Profile mới
+├── StartBot.vbs                   # Khởi động Bot 1-click êm ru (KHÔNG hiện terminal đen)
+├── StartBot.bat                   # Khởi động Bot qua file Batch
+└── README.md                      # Tài liệu hướng dẫn chi tiết
 ```
 
 ---

@@ -56,10 +56,16 @@ class App(ctk.CTk):
         ctk.CTkLabel(self.logo_box, text="BING BOT", font=(FONT_FAMILY, 24, "bold"), text_color=COLOR_ACCENT).pack(anchor="w")
         ctk.CTkLabel(self.logo_box, text="v8.1 Edge Native", font=(FONT_FAMILY, 11), text_color=COLOR_TEXT_SECONDARY).pack(anchor="w")
 
+        # UI State (Khôi phục cấu hình lựa chọn trước đó)
+        saved_ui = self.cfg.get("ui_state", {})
+        saved_mode = saved_ui.get("profile_mode", 0)
+        saved_profile = saved_ui.get("selected_profile", "")
+        saved_run_mode = saved_ui.get("run_mode", "Full Run")
+
         # 1. CHẾ ĐỘ HỒ SƠ (AUTO ALL vs CHẠY LẺ)
         ctk.CTkLabel(self.sidebar, text="🤖 CHẾ ĐỘ HỒ SƠ", font=(FONT_FAMILY, 11, "bold"), text_color="#bdc3c7").pack(anchor="w", padx=15, pady=(5, 3))
         
-        self.radio_mode_var = ctk.IntVar(value=0) # 0: Auto All, 1: Single
+        self.radio_mode_var = ctk.IntVar(value=saved_mode) # 0: Auto All, 1: Single
         self.rb_auto = ctk.CTkRadioButton(
             self.sidebar, text="Chạy tất cả (Auto All)", variable=self.radio_mode_var, value=0,
             command=self.update_ui_profile_state, font=(FONT_FAMILY, 12), fg_color=COLOR_ACCENT
@@ -73,10 +79,13 @@ class App(ctk.CTk):
         self.rb_single.pack(anchor="w", padx=20, pady=4)
 
         profiles_list = self.cfg.get("pc", {}).get("profiles", ["Profile 1"])
+        initial_profile = saved_profile if saved_profile in profiles_list else (profiles_list[0] if profiles_list else "Profile 1")
         self.profile_menu = ctk.CTkOptionMenu(
             self.sidebar, values=profiles_list, width=220, height=32,
-            fg_color="#2c3e50", button_color="#1a252f", font=(FONT_FAMILY, 12)
+            fg_color="#2c3e50", button_color="#1a252f", font=(FONT_FAMILY, 12),
+            command=lambda _: self.sync_quick_toggles_to_cfg()
         )
+        self.profile_menu.set(initial_profile)
         self.profile_menu.pack(padx=15, pady=(4, 15))
 
         # 2. CẦN GẠT LOẠI NHIỆM VỤ (SEGMENTED BUTTON: ALL / PC / MOBILE)
@@ -85,30 +94,34 @@ class App(ctk.CTk):
         self.seg_mode = ctk.CTkSegmentedButton(
             self.sidebar, values=["Full Run", "PC Only", "Mobile Only"],
             selected_color=COLOR_ACCENT, selected_hover_color=COLOR_ACCENT_HOVER,
-            unselected_color=COLOR_CARD, font=(FONT_FAMILY, 11, "bold")
+            unselected_color=COLOR_CARD, font=(FONT_FAMILY, 11, "bold"),
+            command=lambda _: self.sync_quick_toggles_to_cfg()
         )
-        self.seg_mode.set("Full Run")
+        if saved_run_mode in ["Full Run", "PC Only", "Mobile Only"]:
+            self.seg_mode.set(saved_run_mode)
+        else:
+            self.seg_mode.set("Full Run")
         self.seg_mode.pack(fill="x", padx=15, pady=(2, 15))
 
         # 3. TÙY CHỌN CHI TIẾT (CHECKBOXES)
         ctk.CTkLabel(self.sidebar, text="⚙️ NHIỆM VỤ CHI TIẾT", font=(FONT_FAMILY, 11, "bold"), text_color="#3498db").pack(anchor="w", padx=15, pady=(5, 3))
 
-        self.chk_pc_search = ctk.CTkCheckBox(self.sidebar, text="PC Search (Desktop)", font=(FONT_FAMILY, 12), fg_color=COLOR_ACCENT, hover_color=COLOR_ACCENT_HOVER)
+        self.chk_pc_search = ctk.CTkCheckBox(self.sidebar, text="PC Search (Desktop)", font=(FONT_FAMILY, 12), fg_color=COLOR_ACCENT, hover_color=COLOR_ACCENT_HOVER, command=self.sync_quick_toggles_to_cfg)
         if self.cfg.get("pc", {}).get("do_search", True): self.chk_pc_search.select()
         self.chk_pc_search.pack(anchor="w", padx=20, pady=3)
 
-        self.chk_pc_sets = ctk.CTkCheckBox(self.sidebar, text="PC Daily Sets & Quizzes", font=(FONT_FAMILY, 12), fg_color=COLOR_ACCENT, hover_color=COLOR_ACCENT_HOVER)
+        self.chk_pc_sets = ctk.CTkCheckBox(self.sidebar, text="PC Daily Sets & Quizzes", font=(FONT_FAMILY, 12), fg_color=COLOR_ACCENT, hover_color=COLOR_ACCENT_HOVER, command=self.sync_quick_toggles_to_cfg)
         if self.cfg.get("pc", {}).get("do_daily_sets", True): self.chk_pc_sets.select()
         self.chk_pc_sets.pack(anchor="w", padx=20, pady=3)
 
-        self.chk_mob_search = ctk.CTkCheckBox(self.sidebar, text="Mobile Search (EdgA)", font=(FONT_FAMILY, 12), fg_color="#e67e22", hover_color="#d35400")
+        self.chk_mob_search = ctk.CTkCheckBox(self.sidebar, text="Mobile Search (EdgA)", font=(FONT_FAMILY, 12), fg_color="#e67e22", hover_color="#d35400", command=self.sync_quick_toggles_to_cfg)
         if self.cfg.get("mobile", {}).get("do_search", True): self.chk_mob_search.select()
         self.chk_mob_search.pack(anchor="w", padx=20, pady=3)
 
         # 4. TÙY CHỌN HỆ THỐNG
         ctk.CTkLabel(self.sidebar, text="⚙️ HỆ THỐNG", font=(FONT_FAMILY, 11, "bold"), text_color="#bdc3c7").pack(anchor="w", padx=15, pady=(12, 3))
         
-        self.switch_close = ctk.CTkSwitch(self.sidebar, text="Tự tắt bot khi xong", font=(FONT_FAMILY, 12), progress_color=COLOR_ACCENT)
+        self.switch_close = ctk.CTkSwitch(self.sidebar, text="Tự tắt bot khi xong", font=(FONT_FAMILY, 12), progress_color=COLOR_ACCENT, command=self.sync_quick_toggles_to_cfg)
         if self.cfg.get("general", {}).get("auto_close", False): self.switch_close.select()
         self.switch_close.pack(anchor="w", padx=20, pady=4)
 
@@ -205,6 +218,7 @@ class App(ctk.CTk):
             self.profile_menu.configure(state="disabled", fg_color="#2c3e50")
         else:
             self.profile_menu.configure(state="normal", fg_color="#34495e")
+        self.sync_quick_toggles_to_cfg()
 
     def render_scoreboard_rows(self):
         """Vẽ lại bảng điểm 6 cột chi tiết"""
@@ -270,7 +284,19 @@ class App(ctk.CTk):
         self.profile_menu.configure(values=profiles)
         if self.profile_menu.get() not in profiles and profiles:
             self.profile_menu.set(profiles[0])
+
+        # Đồng bộ trạng thái checkbox/switch từ settings dialog
+        if self.cfg.get("pc", {}).get("do_search", True): self.chk_pc_search.select()
+        else: self.chk_pc_search.deselect()
+        if self.cfg.get("pc", {}).get("do_daily_sets", True): self.chk_pc_sets.select()
+        else: self.chk_pc_sets.deselect()
+        if self.cfg.get("mobile", {}).get("do_search", True): self.chk_mob_search.select()
+        else: self.chk_mob_search.deselect()
+        if self.cfg.get("general", {}).get("auto_close", False): self.switch_close.select()
+        else: self.switch_close.deselect()
+
         self.render_scoreboard_rows()
+        self.sync_quick_toggles_to_cfg()
 
         # Cập nhật thông báo phản hồi trực quan trên giao diện chính
         self.lbl_main_status.configure(text="✅ Đã lưu và áp dụng cài đặt thành công!", text_color=COLOR_SUCCESS)
@@ -349,11 +375,18 @@ class App(ctk.CTk):
         save_daily_stats(self.daily_stats)
 
     def sync_quick_toggles_to_cfg(self):
-        self.cfg.setdefault("pc", {})["do_search"] = bool(self.chk_pc_search.get())
-        self.cfg.setdefault("pc", {})["do_daily_sets"] = bool(self.chk_pc_sets.get())
-        self.cfg.setdefault("mobile", {})["do_search"] = bool(self.chk_mob_search.get())
-        self.cfg.setdefault("general", {})["auto_close"] = bool(self.switch_close.get())
-        ConfigManager.save(self.cfg)
+        try:
+            self.cfg.setdefault("ui_state", {})["profile_mode"] = int(self.radio_mode_var.get())
+            self.cfg.setdefault("ui_state", {})["selected_profile"] = str(self.profile_menu.get())
+            self.cfg.setdefault("ui_state", {})["run_mode"] = str(self.seg_mode.get())
+
+            self.cfg.setdefault("pc", {})["do_search"] = bool(self.chk_pc_search.get())
+            self.cfg.setdefault("pc", {})["do_daily_sets"] = bool(self.chk_pc_sets.get())
+            self.cfg.setdefault("mobile", {})["do_search"] = bool(self.chk_mob_search.get())
+            self.cfg.setdefault("general", {})["auto_close"] = bool(self.switch_close.get())
+            ConfigManager.save(self.cfg)
+        except Exception:
+            pass
 
     def run_bot_process(self):
         self.sync_quick_toggles_to_cfg()

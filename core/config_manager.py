@@ -8,6 +8,11 @@ DEFAULT_SETTINGS = {
         "auto_close": False,
         "delay_between_accounts": 15
     },
+    "ui_state": {
+        "profile_mode": 0,
+        "selected_profile": "Profile 1",
+        "run_mode": "Full Run"
+    },
     "pc": {
         "enabled": True,
         "do_search": True,
